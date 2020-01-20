@@ -42,7 +42,7 @@ passport.use(
     {
       clientID: config.clientID,
       clientSecret: config.clientSecret,
-      callbackURL: "http://localhost:4200/api/auth/callback",
+      callbackURL: "https://bug-hunters.me/api/auth/callback",
       scope: ["identify", "email"]
     },
     (access, refresh, profile, cb) => {
@@ -61,16 +61,6 @@ app.use((req, res, next) => {
 });
 app.use("/", express.static(`${__dirname}/BHCC`));
 app.use("/api/users", UserRouter);
-app.get("/:id/:file", async (req, res) => {
-  const user = await User.findOne({ id: req.params.id });
-  const file = user.toJSON().uploads.find(f => f.filename === req.params.file);
-  res.sendFile(file.path);
-});
-app.get("/:id/:file/info", async (req, res) => {
-  const user = await User.findOne({ id: req.params.id });
-  const file = user.toJSON().uploads.find(f => f.filename === req.params.file);
-  res.json(file);
-});
 app.get("/api/auth", passport.authenticate("discord"));
 
 app.post(
@@ -117,6 +107,17 @@ app.post(
     }
   }
 );
+
+app.get("/:id/:file", async (req, res) => {
+  const user = await User.findOne({ id: req.params.id });
+  const file = user.toJSON().uploads.find(f => f.filename === req.params.file);
+  res.sendFile(file.path);
+});
+app.get("/:id/:file/info", async (req, res) => {
+  const user = await User.findOne({ id: req.params.id });
+  const file = user.toJSON().uploads.find(f => f.filename === req.params.file);
+  res.json(file);
+});
 app.listen(4200, () => {
   console.log("Listening on PORT 4200");
 });
