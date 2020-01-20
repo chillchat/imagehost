@@ -1,0 +1,3 @@
+[submodule "backend/BHCC"]
+	path = backend/BHCC
+	url = https://github.com/Tim-The/BHCC

@@ -1,62 +1,47 @@
-import path from 'path';
-import { fileURLToPath } from 'url';
+import express from "express";
+import UserModel from "../models/User.Model.js";
+import Upload from "../uploader.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const User = express.Router();
 
-import express from "express"
-import fs from "fs"
-import { createUser, getUser, verifyToken } from "../models/User.Model.js"
-import Upload from "../uploader.js"
-const User = express.Router()
+User.post("/upload", Upload.single("image"), async (req, res) => {
+  const destArr = req.file.destination.split("/");
+  const uid = destArr[destArr.length - 1];
+  const file = { ...req.file, timestamp: Date.now() };
+  const user = await UserModel.findOneAndUpdate(
+    { id: uid },
+    { $push: { uploads: file } },
+    { new: true }
+  );
+  res.json({ upload: file, uid: user.toJSON().id });
+});
 
-User.post("/register", async (req, res, next) => {
-  const user = await createUser(req.body).catch((err) => {
-    if (err) res.status(500).json(err)
-  })
-  console.log(user)
-  res.json(user.toJSON().token)
-  const userUploadPath = path.join(path.resolve(__dirname, "..", "uploads"), `${user.toJSON().id}`)
-  if (!fs.existsSync(userUploadPath)) {
-    fs.mkdirSync(userUploadPath);
+User.delete("/upload", async (req, res) => {
+  if (!req.headers.authorization) {
+    return res.sendStatus(401);
   }
-})
+  if (!req.body.file) {
+    return res.sendStatus(400);
+  }
+  const user = await UserModel.findOne({ token: req.headers.authorization });
+  user.uploads = user.uploads.filter(f => f.filename !== req.body.file);
+  user.save();
+});
 
-User.post("/login", async (req, res, next) => {
-  const token = req.headers.authorization
-  const verified = await verifyToken(token).catch((err) => {
-    if (err) res.status(500).json(err)
-  })
-  console.log(verified)
-  const user = await getUser(verified.id).catch((err) => {
-    if (err) res.status(500).json(err)
-  })
-  console.log(user)
-  res.json(user)
-})
+User.get("/uploads", async (req, res) => {
+  if (!req.headers.authorization) {
+    return res.sendStatus(401);
+  }
+  const user = await UserModel.findOne({ token: req.headers.authorization });
+  res.json(user.toJSON().uploads);
+});
 
-User.post("/upload/image", async (req, res, next) => {
-  const token = req.headers.authorization
-  const verified = await verifyToken(token).catch((err) => {
-    if (err) res.status(500).json(err)
-  })
-  const user = await getUser(verified.id).catch((err) => {
-    if (err) res.status(500).json(err)
-  })
-  req.user = user
-  next(null)
-}, Upload.single("image"), async (req, res, next) => {
-  res.send({ file: req.file, userID: req.user.id })
-  req.user.uploads.push(req.file)
-  req.user.save()
-})
+User.get("/:id/uploads", async (req, res) => {
+  const user = await UserModel.findOne({ id: req.params.id });
+  if (!user) {
+    return res.sendStatus(404);
+  }
+  res.json(user.toJSON().uploads);
+});
 
-User.get("/:id/uploads/:file", async (req, res, next) => {
-  const user = await getUser(req.params.id).catch((err) => {
-    if (err) res.status(500).json(err)
-  })
-  const filePath = user.toJSON().uploads.find(f => f.filename === req.params.file).path
-  res.sendFile(filePath)
-})
-
-export default User
+export default User;
