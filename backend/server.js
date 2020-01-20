@@ -59,7 +59,7 @@ app.use((req, res, next) => {
   req.db = db;
   next();
 });
-app.use("/", express.static("BHCC"))
+app.use("/", express.static(`${__dirname}/BHCC`));
 app.use("/api/users", UserRouter);
 app.get("/:id/:file", async (req, res) => {
   const user = await User.findOne({ id: req.params.id });
