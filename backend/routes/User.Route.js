@@ -26,6 +26,7 @@ User.delete("/upload", async (req, res) => {
   const user = await UserModel.findOne({ token: req.headers.authorization });
   user.uploads = user.uploads.filter(f => f.filename !== req.body.file);
   user.save();
+  res.sendStatus(201)
 });
 
 User.get("/uploads", async (req, res) => {
